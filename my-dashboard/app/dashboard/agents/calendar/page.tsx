@@ -147,7 +147,7 @@ export default function CalendarAgentPage() {
             <YAxis stroke="#cbd5e1" tick={{ fill: '#64748b', fontSize: 12 }} tickFormatter={(value) => `$${value.toFixed(2)}`} />
             <Tooltip
               contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-              formatter={(value) => `$${value.toFixed(2)}`}
+              formatter={(value) => `$${(value as number).toFixed(2)}`}
               cursor={false}
             />
             <Line
