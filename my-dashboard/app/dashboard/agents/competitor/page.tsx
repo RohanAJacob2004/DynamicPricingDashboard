@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getSkus } from '@/lib/api';
+import { SkuSummary } from '@/lib/api-types';
 import { competitorAgentData, products } from '@/lib/data';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const competitorDetails: Record<string, any> = {
-  'SKU-1042': {
-    productName: 'Cold Brew Coffee 12oz',
+  'MEA001': {
+    productName: 'Rotisserie Chicken',
     ourPrice: 3.99,
     marketMedian: 3.89,
     competitorDelta: 0.10,
@@ -49,12 +51,17 @@ const competitorDetails: Record<string, any> = {
 };
 
 export default function CompetitorAgentPage() {
-  const [selectedSku, setSelectedSku] = useState('SKU-1042');
-  const data = competitorDetails[selectedSku];
+  const [skus, setSkus] = useState<SkuSummary[]>([]);
+  const [selectedSku, setSelectedSku] = useState('MEA001');
+
+  useEffect(() => {
+    getSkus().then(list => setSkus(list)).catch(() => {});
+  }, []);
+
+  const data = competitorDetails[selectedSku] || Object.values(competitorDetails)[0];
 
   return (
     <div className="p-8 space-y-6 bg-[#f5f5f5] min-h-screen">
-      {/* Header */}
       <div className="flex justify-between items-start">
         <div>
           <div className="flex items-center gap-3 mb-2">
@@ -68,7 +75,6 @@ export default function CompetitorAgentPage() {
         <button className="text-slate-400 hover:text-slate-600">⚙️</button>
       </div>
 
-      {/* SKU Selector */}
       <div className="flex items-center justify-end w-fit bg-white p-4 rounded-lg border border-slate-100">
         <div className="flex items-center gap-2">
           <span className="text-slate-600 font-medium">SKU Selector:</span>
@@ -77,144 +83,144 @@ export default function CompetitorAgentPage() {
             onChange={(e) => setSelectedSku(e.target.value)}
             className="px-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
           >
-            {Object.entries(competitorDetails).map(([sku, details]) => (
-              <option key={sku} value={sku}>{sku} · {details.productName}</option>
-            ))}
+            {skus.length > 0
+              ? skus.map(s => <option key={s.sku} value={s.sku}>{s.sku}</option>)
+              : Object.keys(competitorDetails).map(sku => (
+                  <option key={sku} value={sku}>{sku} · {competitorDetails[sku].productName}</option>
+                ))
+            }
           </select>
         </div>
       </div>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-lg border border-slate-100 shadow-xs">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-teal-600 text-lg">$</span>
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Our Price</span>
-          </div>
-          <div className="text-3xl font-bold text-slate-800">${data.ourPrice.toFixed(2)}</div>
-          <p className="text-xs text-slate-500 mt-1">Current</p>
-        </div>
-
-        <div className="bg-white p-5 rounded-lg border border-slate-100 shadow-xs">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-teal-600 text-lg">📊</span>
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Market Median</span>
-          </div>
-          <div className="text-3xl font-bold text-slate-800">${data.marketMedian.toFixed(2)}</div>
-          <p className="text-xs text-slate-500 mt-1">vs 5 competitors</p>
-        </div>
-
-        <div className="bg-white p-5 rounded-lg border border-slate-100 shadow-xs">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-teal-600 text-lg">📈</span>
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Competitor Delta</span>
-          </div>
-          <div className={`text-3xl font-bold ${data.competitorDelta >= 0 ? 'text-emerald-600' : 'text-slate-800'}`}>
-            +${data.competitorDelta.toFixed(2)}
-          </div>
-          <p className="text-xs text-slate-500 mt-1">above median</p>
-        </div>
-
-        <div className="bg-white p-5 rounded-lg border border-slate-100 shadow-xs">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-teal-600 text-lg">🎯</span>
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Market Position</span>
-          </div>
-          <div className="text-3xl font-bold text-slate-800">{data.marketPosition}</div>
-          <p className="text-xs text-slate-500 mt-1">by price rank</p>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Left Column */}
-        <div className="space-y-6">
-          {/* Justification Card */}
-          <div className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm">
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
-              <div className="w-1 h-6 bg-teal-600 rounded"></div>
-              <h3 className="font-bold text-slate-900">Justification Card — {selectedSku}</h3>
+      {data && (
+        <>
+          <div className="grid grid-cols-4 gap-4">
+            <div className="bg-white p-5 rounded-lg border border-slate-100 shadow-xs">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-teal-600 text-lg">$</span>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Our Price</span>
+              </div>
+              <div className="text-3xl font-bold text-slate-800">${data.ourPrice.toFixed(2)}</div>
+              <p className="text-xs text-slate-500 mt-1">Current</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-2">Competitor Delta</p>
-                <p className={`text-2xl font-bold mb-1 ${data.competitorDelta >= 0 ? 'text-emerald-600' : 'text-slate-900'}`}>
-                  +${data.competitorDelta.toFixed(2)}
-                </p>
-                <p className="text-xs text-slate-600">above market median</p>
+            <div className="bg-white p-5 rounded-lg border border-slate-100 shadow-xs">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-teal-600 text-lg">📊</span>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Market Median</span>
               </div>
-
-              <div className="bg-slate-50 p-4 rounded-lg">
-                <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-2">Price Gap to Walmart</p>
-                <p className={`text-2xl font-bold mb-1 ${data.priceGapToWalmart > 0 ? 'text-rose-600' : 'text-slate-900'}`}>
-                  +${Math.abs(data.priceGapToWalmart).toFixed(2)}
-                </p>
-                <p className="text-xs text-slate-600">highest volume competitor</p>
-              </div>
+              <div className="text-3xl font-bold text-slate-800">${data.marketMedian.toFixed(2)}</div>
+              <p className="text-xs text-slate-500 mt-1">vs 5 competitors</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-6 mt-6">
-              <div className="bg-slate-50 p-4 rounded-lg">
-                <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-2">Est. Volume Impact</p>
-                <p className={`text-2xl font-bold mb-1 ${data.volumeImpact < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                  {data.volumeImpact > 0 ? '+' : ''}{data.volumeImpact}%
-                </p>
-                <p className="text-xs text-slate-600">if no price change</p>
+            <div className="bg-white p-5 rounded-lg border border-slate-100 shadow-xs">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-teal-600 text-lg">📈</span>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Competitor Delta</span>
               </div>
+              <div className={`text-3xl font-bold ${data.competitorDelta >= 0 ? 'text-emerald-600' : 'text-slate-800'}`}>
+                +${data.competitorDelta.toFixed(2)}
+              </div>
+              <p className="text-xs text-slate-500 mt-1">above median</p>
+            </div>
 
-              <div>
-                <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-2">Rec. Adjustment</p>
-                <p className={`text-2xl font-bold mb-1 ${data.recommendedAdjustment < 0 ? 'text-rose-600' : 'text-slate-900'}`}>
-                  {data.recommendedAdjustment > 0 ? '+' : ''}-${Math.abs(data.recommendedAdjustment).toFixed(2)}
-                </p>
-                <p className="text-xs text-slate-600">match market median</p>
+            <div className="bg-white p-5 rounded-lg border border-slate-100 shadow-xs">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-teal-600 text-lg">🎯</span>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Market Position</span>
               </div>
+              <div className="text-3xl font-bold text-slate-800">{data.marketPosition}</div>
+              <p className="text-xs text-slate-500 mt-1">by price rank</p>
             </div>
           </div>
 
-          {/* Agent Reasoning */}
-          <div className="bg-teal-50 border border-teal-200 rounded-lg p-5">
-            <div className="flex items-start gap-3">
-              <span className="text-lg mt-0.5">📊</span>
-              <div>
-                <h4 className="font-bold text-teal-900 mb-2">Agent Reasoning</h4>
-                <p className="text-sm text-teal-800 leading-relaxed">
-                  {data.agentReasoning}
-                </p>
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-6">
+              <div className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+                  <div className="w-1 h-6 bg-teal-600 rounded"></div>
+                  <h3 className="font-bold text-slate-900">Justification Card — {selectedSku}</h3>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-2">Competitor Delta</p>
+                    <p className={`text-2xl font-bold mb-1 ${data.competitorDelta >= 0 ? 'text-emerald-600' : 'text-slate-900'}`}>
+                      +${data.competitorDelta.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-slate-600">above market median</p>
+                  </div>
+
+                  <div className="bg-slate-50 p-4 rounded-lg">
+                    <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-2">Price Gap to Walmart</p>
+                    <p className={`text-2xl font-bold mb-1 ${data.priceGapToWalmart > 0 ? 'text-rose-600' : 'text-slate-900'}`}>
+                      +${Math.abs(data.priceGapToWalmart).toFixed(2)}
+                    </p>
+                    <p className="text-xs text-slate-600">highest volume competitor</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6 mt-6">
+                  <div className="bg-slate-50 p-4 rounded-lg">
+                    <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-2">Est. Volume Impact</p>
+                    <p className={`text-2xl font-bold mb-1 ${data.volumeImpact < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                      {data.volumeImpact > 0 ? '+' : ''}{data.volumeImpact}%
+                    </p>
+                    <p className="text-xs text-slate-600">if no price change</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-2">Rec. Adjustment</p>
+                    <p className={`text-2xl font-bold mb-1 ${data.recommendedAdjustment < 0 ? 'text-rose-600' : 'text-slate-900'}`}>
+                      {data.recommendedAdjustment > 0 ? '+' : ''}-${Math.abs(data.recommendedAdjustment).toFixed(2)}
+                    </p>
+                    <p className="text-xs text-slate-600">match market median</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-teal-50 border border-teal-200 rounded-lg p-5">
+                <div className="flex items-start gap-3">
+                  <span className="text-lg mt-0.5">📊</span>
+                  <div>
+                    <h4 className="font-bold text-teal-900 mb-2">Agent Reasoning</h4>
+                    <p className="text-sm text-teal-800 leading-relaxed">
+                      {data.agentReasoning}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm">
+                <div className="mb-6">
+                  <h3 className="font-bold text-slate-900">Competitor Price Comparison</h3>
+                  <p className="text-sm text-slate-500 mt-1">{selectedSku} — Live market data</p>
+                </div>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={data.competitorComparison}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                    <XAxis dataKey="retailer" stroke="#cbd5e1" tick={{ fill: '#64748b', fontSize: 12 }} />
+                    <YAxis stroke="#cbd5e1" tick={{ fill: '#64748b', fontSize: 12 }} tickFormatter={(value) => `$${value.toFixed(2)}`} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      formatter={(value) => `$${(value as number).toFixed(2)}`}
+                      cursor={false}
+                    />
+                    <Bar barSize={50} dataKey="price" fill="#10b981" radius={40}>
+                      {data.competitorComparison.map((entry: { retailer: string; price: number; fill: string }, idx: number) => (
+                        <Bar key={`bar-${idx}`} dataKey="price" fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Right Column */}
-        <div>
-          {/* Competitor Price Comparison */}
-          <div className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm">
-            <div className="mb-6">
-              <h3 className="font-bold text-slate-900">Competitor Price Comparison</h3>
-              <p className="text-sm text-slate-500 mt-1">{selectedSku} — Live market data</p>
-            </div>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={data.competitorComparison}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="retailer" stroke="#cbd5e1" tick={{ fill: '#64748b', fontSize: 12 }} />
-                <YAxis stroke="#cbd5e1" tick={{ fill: '#64748b', fontSize: 12 }} tickFormatter={(value) => `$${value.toFixed(2)}`} />
-                <Tooltip
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  formatter={(value) => `$${(value as number).toFixed(2)}`}
-                  cursor={false}
-                />
-                <Bar barSize={50} dataKey="price" fill="#10b981" radius={40}>
-                  {data.competitorComparison.map((entry: { retailer: string; price: number; fill: string }, idx: number) => (
-                    <Bar key={`bar-${idx}`} dataKey="price" fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }

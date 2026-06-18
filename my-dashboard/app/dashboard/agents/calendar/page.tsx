@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getSkus } from '@/lib/api';
+import { SkuSummary } from '@/lib/api-types';
 import { calendarAgentData } from '@/lib/data';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const calendarDetails: Record<string, any> = {
-  'SKU-7230': {
-    productName: 'Almond Milk 1L',
+  'MEA001': {
+    productName: 'Rotisserie Chicken',
     upcomingEvent: 'Sustainability Week',
     daysUntilEvent: 8,
     historicalUplift: 22.5,
@@ -44,12 +46,17 @@ const calendarDetails: Record<string, any> = {
 };
 
 export default function CalendarAgentPage() {
-  const [selectedSku, setSelectedSku] = useState('SKU-1042');
-  const data = calendarDetails[selectedSku];
+  const [skus, setSkus] = useState<SkuSummary[]>([]);
+  const [selectedSku, setSelectedSku] = useState('MEA001');
+
+  useEffect(() => {
+    getSkus().then(list => setSkus(list)).catch(() => {});
+  }, []);
+
+  const data = calendarDetails[selectedSku] || Object.values(calendarDetails)[0];
 
   return (
     <div className="p-8 space-y-6 bg-[#f5f5f5] min-h-screen">
-      {/* Header */}
       <div className="flex justify-between items-start">
         <div>
           <div className="flex items-center gap-3 mb-2">
@@ -63,7 +70,6 @@ export default function CalendarAgentPage() {
         <button className="text-slate-400 hover:text-slate-600">⚙️</button>
       </div>
 
-      {/* SKU Selector */}
       <div className="flex items-center justify-end bg-white p-4 rounded-lg border border-slate-100">
         <div className="flex items-center gap-2">
           <span className="text-slate-600 font-medium">SKU Selector:</span>
@@ -72,104 +78,108 @@ export default function CalendarAgentPage() {
             onChange={(e) => setSelectedSku(e.target.value)}
             className="px-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
           >
-            {Object.entries(calendarDetails).map(([sku, details]) => (
-              <option key={sku} value={sku}>{sku} · {details.productName}</option>
-            ))}
+            {skus.length > 0
+              ? skus.map(s => <option key={s.sku} value={s.sku}>{s.sku}</option>)
+              : Object.keys(calendarDetails).map(sku => (
+                  <option key={sku} value={sku}>{sku} · {calendarDetails[sku].productName}</option>
+                ))
+            }
           </select>
         </div>
       </div>
 
-      {/* Justification Card */}
-      <div className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm">
-        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
-          <div className="w-1 h-6 bg-teal-600 rounded"></div>
-          <h3 className="font-bold text-slate-900">Justification Card — {selectedSku}</h3>
-        </div>
-
-        <div className="grid grid-cols-4 gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-teal-600">📅</span>
-              <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide">Upcoming Event</p>
+      {data && (
+        <>
+          <div className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+              <div className="w-1 h-6 bg-teal-600 rounded"></div>
+              <h3 className="font-bold text-slate-900">Justification Card — {selectedSku}</h3>
             </div>
-            <p className="text-2xl font-bold text-slate-900">{data.upcomingEvent}</p>
-          </div>
 
-          <div className="bg-slate-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-teal-600">⏱️</span>
-              <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide">Days Until Event</p>
+            <div className="grid grid-cols-4 gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-teal-600">📅</span>
+                  <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide">Upcoming Event</p>
+                </div>
+                <p className="text-2xl font-bold text-slate-900">{data.upcomingEvent}</p>
+              </div>
+
+              <div className="bg-slate-50 p-4 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-teal-600">⏱️</span>
+                  <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide">Days Until Event</p>
+                </div>
+                <p className="text-2xl font-bold text-slate-900">{data.daysUntilEvent} days</p>
+              </div>
+
+              <div className="bg-slate-50 p-4 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-teal-600">📈</span>
+                  <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide">Historical Uplift</p>
+                </div>
+                <p className="text-2xl font-bold text-emerald-600">+{data.historicalUplift}%</p>
+              </div>
+
+              <div className="bg-slate-50 p-4 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-teal-600">⭐</span>
+                  <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide">Confidence Score</p>
+                </div>
+                <p className="text-2xl font-bold text-slate-900">{data.confidenceScore.toFixed(2)}</p>
+              </div>
             </div>
-            <p className="text-2xl font-bold text-slate-900">{data.daysUntilEvent} days</p>
           </div>
 
-          <div className="bg-slate-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-teal-600">📈</span>
-              <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide">Historical Uplift</p>
+          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-5">
+            <div className="flex items-start gap-3">
+              <span className="text-lg mt-0.5">🤖</span>
+              <div>
+                <h4 className="font-bold text-emerald-900 mb-2">Agent Reasoning</h4>
+                <p className="text-sm text-emerald-800 leading-relaxed">
+                  {data.agentReasoning}
+                </p>
+              </div>
             </div>
-            <p className="text-2xl font-bold text-emerald-600">+{data.historicalUplift}%</p>
           </div>
 
-          <div className="bg-slate-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-teal-600">⭐</span>
-              <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide">Confidence Score</p>
+          <div className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm">
+            <div className="mb-6">
+              <h3 className="font-bold text-slate-900">7-Day Price Trajectory</h3>
+              <p className="text-sm text-slate-500 mt-1">Recommended vs Baseline — {selectedSku}</p>
             </div>
-            <p className="text-2xl font-bold text-slate-900">{data.confidenceScore.toFixed(2)}</p>
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart data={data.priceTrajectory}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="day" stroke="#cbd5e1" tick={{ fill: '#64748b', fontSize: 12 }} />
+                <YAxis stroke="#cbd5e1" tick={{ fill: '#64748b', fontSize: 12 }} tickFormatter={(value) => `$${value.toFixed(2)}`} />
+                <Tooltip
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  formatter={(value) => `$${(value as number).toFixed(2)}`}
+                  cursor={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="recommended"
+                  stroke="#10b981"
+                  strokeWidth={3}
+                  dot={{ fill: '#10b981', r: 5 }}
+                  name="Recommended"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="baseline"
+                  stroke="#0f1b2d"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  dot={false}
+                  name="Baseline"
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
-        </div>
-      </div>
-
-      {/* Agent Reasoning */}
-      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-5">
-        <div className="flex items-start gap-3">
-          <span className="text-lg mt-0.5">🤖</span>
-          <div>
-            <h4 className="font-bold text-emerald-900 mb-2">Agent Reasoning</h4>
-            <p className="text-sm text-emerald-800 leading-relaxed">
-              {data.agentReasoning}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* 7-Day Price Trajectory */}
-      <div className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm">
-        <div className="mb-6">
-          <h3 className="font-bold text-slate-900">7-Day Price Trajectory</h3>
-          <p className="text-sm text-slate-500 mt-1">Recommended vs Baseline — {selectedSku}</p>
-        </div>
-        <ResponsiveContainer width="100%" height={350}>
-          <LineChart data={data.priceTrajectory}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-            <XAxis dataKey="day" stroke="#cbd5e1" tick={{ fill: '#64748b', fontSize: 12 }} />
-            <YAxis stroke="#cbd5e1" tick={{ fill: '#64748b', fontSize: 12 }} tickFormatter={(value) => `$${value.toFixed(2)}`} />
-            <Tooltip
-              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-              formatter={(value) => `$${(value as number).toFixed(2)}`}
-              cursor={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="recommended"
-              stroke="#10b981"
-              strokeWidth={3}
-              dot={{ fill: '#10b981', r: 5 }}
-              name="Recommended"
-            />
-            <Line
-              type="monotone"
-              dataKey="baseline"
-              stroke="#0f1b2d"
-              strokeWidth={2}
-              strokeDasharray="5 5"
-              dot={false}
-              name="Baseline"
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+        </>
+      )}
     </div>
   );
 }
