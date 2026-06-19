@@ -1,22 +1,18 @@
 ﻿'use client';
 
 import { useState, useEffect } from 'react';
-import { getAllKpis, ProductKpi } from '@/lib/api';
-import { priceHistory as fallbackPriceHistory } from '@/lib/data';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { getAllKpis, getSkuDetail, ProductKpi } from '@/lib/api';
+import { SkuDetail } from '@/lib/api-types';
 
 export default function DashboardHome() {
-  const [priceHistory] = useState(fallbackPriceHistory);
   const [kpis, setKpis] = useState<ProductKpi[]>([]);
   const [kpiError, setKpiError] = useState<string | null>(null);
   const [kpisLoading, setKpisLoading] = useState(true);
   const [selectedSkuId, setSelectedSkuId] = useState<string>('');
-  const [agentScores] = useState<Record<string, number>>({
-    'Calendar': 0.91,
-    'Season': 0.87,
-    'Competitor': 0.84,
-    'Inventory': 0.79,
-  });
+  const [skuDetails, setSkuDetails] = useState<Record<string, SkuDetail>>({});
+  const [detailsLoading, setDetailsLoading] = useState(true);
+  const [filterMode, setFilterMode] = useState<'all' | 'needs_review'>('all');
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
 
   useEffect(() => {
     getAllKpis()
@@ -33,7 +29,33 @@ export default function DashboardHome() {
       .finally(() => setKpisLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (kpis.length === 0) return;
+    Promise.allSettled(
+      kpis.map(k => getSkuDetail(k.sku_id).then(d => ({ sku: k.sku_id, detail: d })))
+    ).then(results => {
+      const map: Record<string, SkuDetail> = {};
+      results.forEach(r => {
+        if (r.status === 'fulfilled') {
+          map[r.value.sku] = r.value.detail;
+        }
+      });
+      setSkuDetails(map);
+      setDetailsLoading(false);
+    });
+  }, [kpis]);
+
   const selectedKpi = kpis.find(k => k.sku_id === selectedSkuId) || kpis[0];
+
+  const needsReviewSet = new Set(
+    Object.entries(skuDetails)
+      .filter(([, d]) => d.final_price.final_recommendation.confidence === 0 || d.inventory.recommendation.confidence === 0)
+      .map(([sku]) => sku)
+  );
+
+  const filteredKpis = filterMode === 'needs_review'
+    ? kpis.filter(k => needsReviewSet.has(k.sku_id))
+    : kpis;
 
     if (kpisLoading) {
     return (
@@ -59,6 +81,8 @@ export default function DashboardHome() {
       )}
 
    
+
+
 
 
 
@@ -101,95 +125,223 @@ export default function DashboardHome() {
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-8">
-        <div className="col-span-8 space-y-4">
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-slate-50 flex justify-between items-center">
-              <h2 className="font-bold text-slate-900">SKU KPI Overview</h2>
-              <span className="text-slate-400 text-sm">{kpis.length} SKUs</span>
-            </div>
+      <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-slate-50 flex justify-between items-center">
+          <h2 className="font-bold text-slate-900">SKU KPI Overview</h2>
+          <div className="flex items-center gap-3">
+            <span className="text-slate-400 text-sm">
+              {filterMode === 'needs_review' ? `${filteredKpis.length} of ` : ''}{kpis.length} SKUs
+              {needsReviewSet.size > 0 && (
+                <span className="text-amber-500 ml-1">· {needsReviewSet.size} need review</span>
+              )}
+            </span>
+            <button
+              onClick={() => setFilterMode(f => f === 'all' ? 'needs_review' : 'all')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                filterMode === 'needs_review'
+                  ? 'bg-amber-100 text-amber-700'
+                  : 'bg-slate-100 text-slate-500 hover:bg-amber-50 hover:text-amber-600'
+              }`}
+            >
+              {filterMode === 'needs_review' ? 'Show All' : `Needs Review (${needsReviewSet.size})`}
+            </button>
+          </div>
+        </div>
 
-            <table className="w-full text-left">
-              <thead className="bg-[#fcfdfe] text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                <tr>
-                  <th className="px-6 py-4">SKU</th>
-                  <th className="px-6 py-4">Gross Margin</th>
-                  <th className="px-6 py-4">Daily Revenue</th>
-                  <th className="px-6 py-4">Weeks of Supply</th>
-                  <th className="px-6 py-4">Days to Expiry</th>
-                  <th className="px-6 py-4">Risk</th>
-                  <th className="px-6 py-4">Est. Waste</th>
-                  <th className="px-6 py-4">Avg Daily Sales</th>
-                  <th className="px-6 py-4"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {kpis.map((k) => (
-                  <tr key={k.sku_id} className={`hover:bg-slate-50/50 transition-colors ${selectedSkuId === k.sku_id ? 'bg-teal-50/50' : ''}`}>
-                    <td className="px-6 py-4 text-sm font-medium text-slate-900">{k.sku_id}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700">{k.gross_margin_pct.toFixed(1)}%</td>
-                    <td className="px-6 py-4 text-sm text-slate-700">${k.daily_revenue.toFixed(2)}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700">{k.weeks_of_supply.toFixed(1)}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700">{k.days_to_expiry}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold border ${k.is_high_risk ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
-                        {k.is_high_risk ? 'High' : 'Low'}
+        <table className="w-full text-left">
+          <thead className="bg-[#fcfdfe] text-slate-400 text-xs font-semibold uppercase tracking-wider">
+            <tr>
+              <th className="px-6 py-4">SKU</th>
+              <th className="px-6 py-4">Gross Margin</th>
+              <th className="px-6 py-4">Daily Revenue</th>
+              <th className="px-6 py-4">Weeks of Supply</th>
+              <th className="px-6 py-4">Days to Expiry</th>
+              <th className="px-6 py-4">Risk</th>
+              <th className="px-6 py-4">Est. Waste</th>
+              <th className="px-6 py-4">Avg Daily Sales</th>
+              <th className="px-6 py-4"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50">
+            {filteredKpis.map((k) => (
+              <tr key={k.sku_id} className={`hover:bg-slate-50/50 transition-colors ${selectedSkuId === k.sku_id ? 'bg-teal-50/50' : ''}`}>
+                <td className="px-6 py-4 text-sm font-medium text-slate-900">{k.sku_id}</td>
+                <td className="px-6 py-4 text-sm text-slate-700">{k.gross_margin_pct.toFixed(1)}%</td>
+                <td className="px-6 py-4 text-sm text-slate-700">${k.daily_revenue.toFixed(2)}</td>
+                <td className="px-6 py-4 text-sm text-slate-700">{k.weeks_of_supply.toFixed(1)}</td>
+                <td className="px-6 py-4 text-sm text-slate-700">{k.days_to_expiry}</td>
+                <td className="px-6 py-4">
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold border ${k.is_high_risk ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+                    {k.is_high_risk ? 'High' : 'Low'}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-sm text-slate-700">{k.estimated_waste_units}</td>
+                <td className="px-6 py-4 text-sm text-slate-700">${k.avg_daily_sales_revenue.toFixed(2)}</td>
+                <td className="px-6 py-4">
+                  <button
+                    onClick={() => setSelectedSkuId(k.sku_id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                      selectedSkuId === k.sku_id
+                        ? 'bg-teal-600 text-white'
+                        : 'bg-slate-100 text-slate-600 hover:bg-teal-100 hover:text-teal-700'
+                    }`}
+                  >
+                    {selectedSkuId === k.sku_id ? 'Selected' : 'Select'}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="font-bold text-slate-900">SKU Details</h2>
+          <div className="flex items-center gap-3">
+            {needsReviewSet.size > 0 && (
+              <button
+                onClick={() => setFilterMode(f => f === 'all' ? 'needs_review' : 'all')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                  filterMode === 'needs_review'
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-slate-100 text-slate-500 hover:bg-amber-50 hover:text-amber-600'
+                }`}
+              >
+                {filterMode === 'needs_review' ? 'Show All' : `${needsReviewSet.size} need review`}
+              </button>
+            )}
+          </div>
+        </div>
+        {detailsLoading && (
+          <div className="text-slate-400 text-sm text-center py-12">Loading details...</div>
+        )}
+        {!detailsLoading && Object.keys(skuDetails).length === 0 && (
+          <div className="text-slate-400 text-sm text-center py-12">No details available</div>
+        )}
+        {!detailsLoading && (
+          <div className="grid grid-cols-2 gap-4">
+            {filteredKpis.map(k => {
+              const d = skuDetails[k.sku_id];
+              if (!d) return null;
+              const needsReview = d.final_price.final_recommendation.confidence === 0 || d.inventory.recommendation.confidence === 0;
+              const isExpanded = expandedCard === d.sku;
+              return (
+                <div
+                  key={k.sku_id}
+                  className={`rounded-lg border transition-colors ${
+                    selectedSkuId === k.sku_id
+                      ? 'border-teal-300 bg-teal-50/50'
+                      : 'border-slate-100 hover:border-slate-200'
+                  }`}
+                >
+                  <div className="p-5 cursor-pointer" onClick={() => setSelectedSkuId(k.sku_id)}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-900">{d.sku}</span>
+                        {needsReview && (
+                          <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-700 text-xs font-bold">⚠</span>
+                        )}
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                        d.final_price.status === 'COMPLETED'
+                          ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                          : 'bg-amber-50 text-amber-600 border-amber-100'
+                      }`}>
+                        {d.final_price.status}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-700">{k.estimated_waste_units}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700">${k.avg_daily_sales_revenue.toFixed(2)}</td>
-                    <td className="px-6 py-4">
-                      <button
-                        onClick={() => setSelectedSkuId(k.sku_id)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                          selectedSkuId === k.sku_id
-                            ? 'bg-teal-600 text-white'
-                            : 'bg-slate-100 text-slate-600 hover:bg-teal-100 hover:text-teal-700'
-                        }`}
-                      >
-                        {selectedSkuId === k.sku_id ? 'Selected' : 'Select'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div className="col-span-4 space-y-8">
-          <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm space-y-6">
-            <div>
-              <h3 className="font-bold text-slate-900">1-Hour Price History</h3>
-              <p className="text-xs text-slate-400 mt-1">Sample SKU</p>
-            </div>
-            <div className="h-64 mt-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={priceHistory}>
-                  <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
-                  <YAxis hide domain={['dataMin - 0.2', 'dataMax + 0.2']} />
-                  <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                  <Line type="monotone" dataKey="price" stroke="#10b981" strokeWidth={3} dot={{ fill: '#10b981', r: 4 }} activeDot={{ r: 6, strokeWidth: 0 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
-            <h3 className="font-bold text-slate-900 uppercase text-xs tracking-wider mb-6">Agent Trust Scores</h3>
-            <div className="space-y-6">
-              {Object.entries(agentScores).sort((a, b) => b[1] - a[1]).map(([agent, score]) => (
-                <div key={agent} className="space-y-2">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-600 font-medium">{agent}</span>
-                    <span className="font-bold text-slate-900">{score.toFixed(2)}</span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4 mb-4">
+                      <div>
+                        <p className="text-xs text-slate-500 mb-1">Action</p>
+                        <span className={`text-sm font-bold ${d.final_price.final_recommendation.action === 'DISCOUNT' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                          {d.final_price.final_recommendation.action}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 mb-1">Modifier</p>
+                        <span className="text-sm font-bold text-slate-900">
+                          {(d.final_price.final_recommendation.suggested_modifier * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 mb-1">Confidence</p>
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-16 bg-slate-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${d.final_price.final_recommendation.confidence === 0 ? 'bg-amber-400' : 'bg-teal-500'}`}
+                              style={{ width: `${Math.max(d.final_price.final_recommendation.confidence * 100, 5)}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-bold text-slate-900">
+                            {d.final_price.final_recommendation.confidence === 0 ? '—' : `${(d.final_price.final_recommendation.confidence * 100).toFixed(0)}%`}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4 border-t border-slate-50 pt-3">
+                      <div className="flex-1">
+                        <p className="text-xs text-slate-400 mb-1">Inventory</p>
+                        <span className={`text-sm font-medium ${d.inventory.recommendation.action === 'DISCOUNT' ? 'text-rose-500' : 'text-emerald-500'}`}>
+                          {d.inventory.recommendation.action ?? '—'} {(d.inventory.recommendation.suggested_modifier * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs text-slate-400 mb-1">Competitor</p>
+                        <span className="text-sm font-medium text-slate-700">
+                          {(d.competitor.recommendation.suggested_modifier * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setExpandedCard(isExpanded ? null : d.sku); }}
+                      className="mt-4 w-full text-xs text-slate-400 hover:text-slate-600 font-medium"
+                    >
+                      {isExpanded ? '▲ Hide Reasoning' : '▼ Show Reasoning'}
+                    </button>
                   </div>
-                  <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-[#10b981] transition-all duration-500" style={{ width: `${score * 100}%` }} />
-                  </div>
+
+                  {isExpanded && (
+                    <div className="px-5 pb-5 space-y-4 border-t border-slate-50 pt-4">
+                      <div>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Inventory Agent</p>
+                        <p className="text-sm text-slate-700 leading-relaxed">{d.inventory.rationale}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Competitor Agent</p>
+                        <p className="text-sm text-slate-700 leading-relaxed">{d.competitor.rationale}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Orchestrator</p>
+                        <p className="text-sm text-slate-700 leading-relaxed">{d.final_price.rationale}</p>
+                      </div>
+
+                      <div className="flex gap-3 pt-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); alert(`Approved ${d.sku}`); }}
+                          className="flex-1 px-4 py-2 rounded-lg text-sm font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                        >
+                          ✓ Approve
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); alert(`Rejected ${d.sku}`); }}
+                          className="flex-1 px-4 py-2 rounded-lg text-sm font-bold bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition-colors"
+                        >
+                          ✕ Reject
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
-        </div>
+        )}
+        {!detailsLoading && filterMode === 'needs_review' && filteredKpis.length === 0 && (
+          <div className="text-slate-400 text-sm text-center py-12">No items need review</div>
+        )}
       </div>
     </div>
   );
