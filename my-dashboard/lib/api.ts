@@ -1,4 +1,4 @@
-import { SkuSummary, SkuDetail, InventoryAgentDetail } from './api-types';
+import { SkuSummary, SkuDetail, InventoryAgentDetail, CompetitorSkuSummary, CompetitorAgentDetail } from './api-types';
 
 export interface DashboardKpis {
   avg_gross_margin_pct: number;
@@ -60,6 +60,14 @@ export async function getAllKpis(): Promise<ProductKpi[]> {
   }
   const json = await res.json();
   return json.data;
+}
+
+export function getCompetitorSkus(): Promise<CompetitorSkuSummary[]> {
+  return apiFetch('/api/agents/competitor/skus');
+}
+
+export function getCompetitorAgent(sku: string): Promise<CompetitorAgentDetail> {
+  return apiFetch(`/api/agents/competitor/${encodeURIComponent(sku)}`);
 }
 
 export async function getKpiBySku(skuId: string): Promise<ProductKpi[]> {

@@ -50,8 +50,7 @@ export default function InventoryAgentPage() {
         <button className="text-slate-400 hover:text-slate-600">⚙️</button>
       </div>
 
-      <div className="bg-white p-4 rounded-lg border border-slate-100">
-        <span className="text-slate-600 font-medium block mb-2">Search SKU:</span>
+      <div className="bg-white p-4 rounded-xl border border-slate-100 w-fit ">
         <div className="relative">
           <input
             type="text"

@@ -88,6 +88,44 @@ export interface DepletionPoint {
   is_projected: boolean;
 }
 
+export interface CompetitorSkuSummary {
+  sku: string;
+  our_current_price: number;
+  competitor_price: number;
+}
+
+export interface CompetitorAlert {
+  suggested_action: string;
+  modifier_pct: number;
+  confidence_score: number;
+}
+
+export interface CompetitorMetrics {
+  our_current_price: number;
+  competitor_price: number;
+  price_difference_pct: number;
+}
+
+export interface CompetitorJustification {
+  headline: string;
+  detailed_reasoning: string;
+}
+
+export interface CompetitorAgentDetail {
+  sku: string;
+  our_current_price: number;
+  competitor_price: number;
+  price_difference_pct: number;
+  status: string;
+  timestamp: string;
+  alert: CompetitorAlert;
+  metrics: CompetitorMetrics;
+  justification: CompetitorJustification;
+  reasoning: string;
+  confidence: number;
+  fallback_used: boolean;
+}
+
 export interface InventoryAgentDetail {
   sku: string;
   product_name: string;

@@ -1,71 +1,42 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getSkus } from '@/lib/api';
-import { SkuSummary } from '@/lib/api-types';
-import { competitorAgentData, products } from '@/lib/data';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-const competitorDetails: Record<string, any> = {
-  'MEA001': {
-    productName: 'Rotisserie Chicken',
-    ourPrice: 3.99,
-    marketMedian: 3.89,
-    competitorDelta: 0.10,
-    marketPosition: '#3 of 6',
-    priceGapToWalmart: 0.20,
-    walmartPrice: 3.79,
-    volumeImpact: -3.2,
-    recommendedAdjustment: -0.10,
-    recommendedPrice: 3.89,
-    agentReasoning: 'Scrape detected Walmart dropped Cold Brew 12oz to $3.79 (~$0.20 vs us). Current positioning at $3.99 places RetailPulse as 3rd most expensive of 6 tracked competitors. Competitor delta of +$0.10 above median suggests mild volume risk. The Competitor Agent recommends a ~$0.10 adjustment to $3.89 to match the market median and protect market share without entering a price war.',
-    competitorComparison: [
-      { retailer: 'RetailPulse', price: 3.99, fill: '#10b981' },
-      { retailer: 'Walmart', price: 3.79, fill: '#0f6b6b' },
-      { retailer: 'Target', price: 4.19, fill: '#0f1b2d' },
-      { retailer: 'Kroger', price: 3.99, fill: '#0db8a8' },
-      { retailer: 'Costco', price: 3.49, fill: '#cbd5e1' },
-      { retailer: 'Whole Foods', price: 4.49, fill: '#0f1b2d' },
-    ]
-  },
-  'SKU-2187': {
-    productName: 'Organic Whole Milk 1L',
-    ourPrice: 2.59,
-    marketMedian: 2.69,
-    competitorDelta: -0.10,
-    marketPosition: '#2 of 5',
-    priceGapToWalmart: -0.10,
-    walmartPrice: 2.69,
-    volumeImpact: +1.5,
-    recommendedAdjustment: 0.00,
-    recommendedPrice: 2.59,
-    agentReasoning: 'Current pricing at $2.59 positions us competitively below the market median of $2.69. This ~$0.10 delta below median suggests strong volume opportunity. Walmart matches median at $2.69. No adjustment recommended at this time as current position provides competitive advantage without sacrificing margin.',
-    competitorComparison: [
-      { retailer: 'RetailPulse', price: 2.59, fill: '#10b981' },
-      { retailer: 'Walmart', price: 2.69, fill: '#0f6b6b' },
-      { retailer: 'Target', price: 2.79, fill: '#0f1b2d' },
-      { retailer: 'Kroger', price: 2.89, fill: '#0db8a8' },
-      { retailer: 'Whole Foods', price: 3.19, fill: '#0f1b2d' },
-    ]
-  }
-};
+import { getCompetitorSkus, getCompetitorAgent } from '@/lib/api';
+import { CompetitorSkuSummary, CompetitorAgentDetail } from '@/lib/api-types';
 
 export default function CompetitorAgentPage() {
-  const [skus, setSkus] = useState<SkuSummary[]>([]);
-  const [selectedSku, setSelectedSku] = useState('MEA001');
+  const [skus, setSkus] = useState<CompetitorSkuSummary[]>([]);
+  const [selectedSku, setSelectedSku] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [data, setData] = useState<CompetitorAgentDetail | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getSkus().then(list => setSkus(list)).catch(() => {});
+    getCompetitorSkus()
+      .then(list => {
+        setSkus(list);
+        if (list.length > 0 && !selectedSku) {
+          setSelectedSku(list[0].sku);
+        }
+      })
+      .catch(() => { });
   }, []);
 
-  const data = competitorDetails[selectedSku] || Object.values(competitorDetails)[0];
+  useEffect(() => {
+    if (!selectedSku) return;
+    setLoading(true);
+    getCompetitorAgent(selectedSku)
+      .then(setData)
+      .catch(() => setData(null))
+      .finally(() => setLoading(false));
+  }, [selectedSku]);
 
   return (
     <div className="p-8 space-y-6 bg-[#f5f5f5] min-h-screen">
       <div className="flex justify-between items-start">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-lg bg-teal-700 flex items-center justify-center text-white text-lg">📊</div>
             <div>
               <h1 className="text-3xl font-bold text-[#0f172a]">Competitor Agent</h1>
               <p className="text-[#64748b] text-sm">Real-time competitive pricing intelligence</p>
@@ -75,63 +46,100 @@ export default function CompetitorAgentPage() {
         <button className="text-slate-400 hover:text-slate-600">⚙️</button>
       </div>
 
-      <div className="flex items-center justify-end w-fit bg-white p-4 rounded-lg border border-slate-100">
-        <div className="flex items-center gap-2">
-          <span className="text-slate-600 font-medium">SKU Selector:</span>
-          <select
-            value={selectedSku}
-            onChange={(e) => setSelectedSku(e.target.value)}
-            className="px-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
-          >
-            {skus.length > 0
-              ? skus.map(s => <option key={s.sku} value={s.sku}>{s.sku}</option>)
-              : Object.keys(competitorDetails).map(sku => (
-                  <option key={sku} value={sku}>{sku} · {competitorDetails[sku].productName}</option>
-                ))
-            }
-          </select>
+
+
+      <div className="bg-white p-4 rounded-xl border border-slate-100 w-fit">
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setShowDropdown(true); }}
+            onFocus={() => setShowDropdown(true)}
+            onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+            placeholder="Type to search SKU..."
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
+          />
+          {showDropdown && (
+            <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+              {skus
+                .filter(s => s.sku.toLowerCase().includes(searchQuery.toLowerCase()))
+                .map(s => (
+                  <div
+                    key={s.sku}
+                    onMouseDown={() => { setSelectedSku(s.sku); setSearchQuery(s.sku); setShowDropdown(false); }}
+                    className={`px-3 py-2 cursor-pointer text-sm hover:bg-teal-50 ${selectedSku === s.sku ? 'bg-teal-50 text-teal-700 font-medium' : 'text-slate-700'}`}
+                  >
+                    {s.sku}
+                  </div>
+                ))}
+              {skus.filter(s => s.sku.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                <div className="px-3 py-2 text-sm text-slate-400">No SKUs found</div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
+      {loading && (
+        <div className="text-slate-500 text-center py-12">Loading competitor data...</div>
+      )}
+
+      {!loading && !data && (
+        <div className="text-slate-500 text-center py-12">No competitor data available for {selectedSku}</div>
+      )}
+
       {data && (
         <>
+         
+
+          <div className="mt-6 bg-teal-50 border border-teal-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+             
+              <div>
+                <h4 className="font-bold text-teal-900 mb-2">Agent Reasoning</h4>
+                <p className="text-sm text-teal-800 leading-relaxed">{data.reasoning}</p>
+                <p className="text-xs text-teal-600 mt-2">Confidence: {(data.confidence * 100).toFixed(0)}% {data.fallback_used ? '(fallback)' : ''}</p>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-4 gap-4">
             <div className="bg-white p-5 rounded-lg border border-slate-100 shadow-xs">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-teal-600 text-lg">$</span>
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Our Price</span>
               </div>
-              <div className="text-3xl font-bold text-slate-800">${data.ourPrice.toFixed(2)}</div>
+              <div className="text-3xl font-bold text-slate-800">${data.our_current_price.toFixed(2)}</div>
               <p className="text-xs text-slate-500 mt-1">Current</p>
             </div>
 
             <div className="bg-white p-5 rounded-lg border border-slate-100 shadow-xs">
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-teal-600 text-lg">📊</span>
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Market Median</span>
+                <span className="text-teal-600 text-lg">🏪</span>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Competitor Price</span>
               </div>
-              <div className="text-3xl font-bold text-slate-800">${data.marketMedian.toFixed(2)}</div>
-              <p className="text-xs text-slate-500 mt-1">vs 5 competitors</p>
+              <div className="text-3xl font-bold text-slate-800">${data.competitor_price.toFixed(2)}</div>
+              <p className="text-xs text-slate-500 mt-1">Market competitor</p>
             </div>
 
             <div className="bg-white p-5 rounded-lg border border-slate-100 shadow-xs">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-teal-600 text-lg">📈</span>
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Competitor Delta</span>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Price Difference</span>
               </div>
-              <div className={`text-3xl font-bold ${data.competitorDelta >= 0 ? 'text-emerald-600' : 'text-slate-800'}`}>
-                +${data.competitorDelta.toFixed(2)}
+              <div className={`text-3xl font-bold ${data.price_difference_pct < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                {data.price_difference_pct > 0 ? '+' : ''}{data.price_difference_pct.toFixed(1)}%
               </div>
-              <p className="text-xs text-slate-500 mt-1">above median</p>
+              <p className="text-xs text-slate-500 mt-1">vs competitor</p>
             </div>
 
             <div className="bg-white p-5 rounded-lg border border-slate-100 shadow-xs">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-teal-600 text-lg">🎯</span>
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Market Position</span>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</span>
               </div>
-              <div className="text-3xl font-bold text-slate-800">{data.marketPosition}</div>
-              <p className="text-xs text-slate-500 mt-1">by price rank</p>
+              <div className={`text-lg font-bold ${data.status === 'COMPLETED' ? 'text-emerald-600' : 'text-amber-600'}`}>{data.status}</div>
+              <p className="text-xs text-slate-500 mt-1">Agent run status</p>
             </div>
           </div>
 
@@ -144,78 +152,83 @@ export default function CompetitorAgentPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-2">Competitor Delta</p>
-                    <p className={`text-2xl font-bold mb-1 ${data.competitorDelta >= 0 ? 'text-emerald-600' : 'text-slate-900'}`}>
-                      +${data.competitorDelta.toFixed(2)}
+                  <div className="bg-slate-50 p-4 rounded-lg">
+                    <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-2">Suggested Action</p>
+                    <p className={`text-2xl font-bold mb-1 ${data.alert.suggested_action === 'DISCOUNT' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                      {data.alert.suggested_action}
                     </p>
-                    <p className="text-xs text-slate-600">above market median</p>
+                    <p className="text-xs text-slate-600">recommended</p>
                   </div>
 
                   <div className="bg-slate-50 p-4 rounded-lg">
-                    <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-2">Price Gap to Walmart</p>
-                    <p className={`text-2xl font-bold mb-1 ${data.priceGapToWalmart > 0 ? 'text-rose-600' : 'text-slate-900'}`}>
-                      +${Math.abs(data.priceGapToWalmart).toFixed(2)}
+                    <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-2">Modifier</p>
+                    <p className={`text-2xl font-bold mb-1 ${data.alert.modifier_pct < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                      {data.alert.modifier_pct > 0 ? '+' : ''}{data.alert.modifier_pct.toFixed(1)}%
                     </p>
-                    <p className="text-xs text-slate-600">highest volume competitor</p>
+                    <p className="text-xs text-slate-600">price adjustment</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6 mt-6">
+                  
+
                   <div className="bg-slate-50 p-4 rounded-lg">
-                    <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-2">Est. Volume Impact</p>
-                    <p className={`text-2xl font-bold mb-1 ${data.volumeImpact < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                      {data.volumeImpact > 0 ? '+' : ''}{data.volumeImpact}%
-                    </p>
-                    <p className="text-xs text-slate-600">if no price change</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-2">Rec. Adjustment</p>
-                    <p className={`text-2xl font-bold mb-1 ${data.recommendedAdjustment < 0 ? 'text-rose-600' : 'text-slate-900'}`}>
-                      {data.recommendedAdjustment > 0 ? '+' : ''}-${Math.abs(data.recommendedAdjustment).toFixed(2)}
-                    </p>
-                    <p className="text-xs text-slate-600">match market median</p>
+                    <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-2">Our Price / Competitor</p>
+                    <p className="text-2xl font-bold text-slate-900 mb-1">${data.metrics.our_current_price.toFixed(2)} / ${data.competitor_price.toFixed(2)}</p>
+                    <p className="text-xs text-slate-600">{data.price_difference_pct > 0 ? '+' : ''}{data.price_difference_pct.toFixed(1)}% delta</p>
                   </div>
                 </div>
-              </div>
 
-              <div className="bg-teal-50 border border-teal-200 rounded-lg p-5">
-                <div className="flex items-start gap-3">
-                  <span className="text-lg mt-0.5">📊</span>
-                  <div>
-                    <h4 className="font-bold text-teal-900 mb-2">Agent Reasoning</h4>
-                    <p className="text-sm text-teal-800 leading-relaxed">
-                      {data.agentReasoning}
-                    </p>
-                  </div>
-                </div>
               </div>
             </div>
 
             <div>
               <div className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm">
-                <div className="mb-6">
-                  <h3 className="font-bold text-slate-900">Competitor Price Comparison</h3>
-                  <p className="text-sm text-slate-500 mt-1">{selectedSku} — Live market data</p>
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+                  <div className="w-1 h-6 bg-teal-600 rounded"></div>
+                  <h3 className="font-bold text-slate-900">Competitive Analysis</h3>
                 </div>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={data.competitorComparison}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                    <XAxis dataKey="retailer" stroke="#cbd5e1" tick={{ fill: '#64748b', fontSize: 12 }} />
-                    <YAxis stroke="#cbd5e1" tick={{ fill: '#64748b', fontSize: 12 }} tickFormatter={(value) => `$${value.toFixed(2)}`} />
-                    <Tooltip
-                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                      formatter={(value) => `$${(value as number).toFixed(2)}`}
-                      cursor={false}
-                    />
-                    <Bar barSize={50} dataKey="price" fill="#10b981" radius={40}>
-                      {data.competitorComparison.map((entry: { retailer: string; price: number; fill: string }, idx: number) => (
-                        <Bar key={`bar-${idx}`} dataKey="price" fill={entry.fill} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center py-3 border-b border-slate-50">
+                    <span className="text-sm text-slate-600">Our Price</span>
+                    <span className="text-sm font-bold text-slate-900">${data.metrics.our_current_price.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-3 border-b border-slate-50">
+                    <span className="text-sm text-slate-600">Competitor Price</span>
+                    <span className="text-sm font-bold text-slate-900">${data.metrics.competitor_price.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-3 border-b border-slate-50">
+                    <span className="text-sm text-slate-600">Price Difference</span>
+                    <span className={`text-sm font-bold ${data.metrics.price_difference_pct < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                      {data.metrics.price_difference_pct > 0 ? '+' : ''}{data.metrics.price_difference_pct.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-3 border-b border-slate-50">
+                    <span className="text-sm text-slate-600">Suggested Action</span>
+                    <span className={`text-sm font-bold ${data.alert.suggested_action === 'DISCOUNT' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                      {data.alert.suggested_action}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-3 border-b border-slate-50">
+                    <span className="text-sm text-slate-600">Modifier</span>
+                    <span className={`text-sm font-bold ${data.alert.modifier_pct < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                      {data.alert.modifier_pct > 0 ? '+' : ''}{data.alert.modifier_pct.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-3 border-b border-slate-50">
+                    <span className="text-sm text-slate-600">Confidence Score</span>
+                    <span className="text-sm font-bold text-slate-900">{(data.alert.confidence_score * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="flex justify-between items-center py-3">
+                    <span className="text-sm text-slate-600">Status</span>
+                    <span className={`text-sm font-bold ${data.status === 'COMPLETED' ? 'text-emerald-600' : 'text-amber-600'}`}>{data.status}</span>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-slate-100">
+                  <p className="text-xs text-slate-400">Last updated: {new Date(data.timestamp).toLocaleString()}</p>
+                </div>
               </div>
             </div>
           </div>
