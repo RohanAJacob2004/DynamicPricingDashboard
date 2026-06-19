@@ -1,6 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { revenueByCategory, monthlySales } from '@/lib/data';
+import { getDashboardKpis, DashboardKpis } from '@/lib/api';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 const COLORS = ['#10b981', '#0f1b2d', '#0f6b6b', '#0db8a8', '#64748b', '#cbd5e1'];
@@ -21,12 +23,53 @@ const revenueFormatted = revenueByCategory.map(cat => ({
   value: cat.revenue
 }));
 
+const formatCurrency = (value: number | null) =>
+  value === null ? '—' : `$${value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
+const formatPercent = (value: number | null) =>
+  value === null ? '—' : `${value.toFixed(2)}%`;
+
 export default function ReportsPage() {
+  const [kpis, setKpis] = useState<DashboardKpis | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getDashboardKpis()
+      .then(setKpis)
+      .catch((err) => setError(err.message || 'Unable to load KPI data'))
+      .finally(() => setLoading(false));
+  }, []);
+
   const stats = [
-    { label: 'Total Revenue (MTD)', value: '$63,240', icon: '$', change: '+8.2%', changeColor: 'text-emerald-500' },
-    { label: 'Orders Processed', value: '4,821', icon: '🛒', change: '+12.4%', changeColor: 'text-emerald-500' },
-    { label: 'Avg Basket Value', value: '$13.11', icon: '📊', change: '-1.2%', changeColor: 'text-rose-500' },
-    { label: 'Price Accuracy', value: '94.3%', icon: '📈', change: '+2.1%', changeColor: 'text-emerald-500' },
+    {
+      label: 'Total Daily Revenue',
+      value: loading ? 'Loading…' : kpis ? formatCurrency(kpis.total_daily_revenue) : 'Error',
+      icon: '$',
+      change: kpis ? '+0.0%' : '',
+      changeColor: 'text-emerald-500',
+    },
+    {
+      label: 'Avg Gross Margin',
+      value: loading ? 'Loading…' : kpis ? formatPercent(kpis.avg_gross_margin_pct) : 'Error',
+      icon: '📊',
+      change: kpis ? '+0.0%' : '',
+      changeColor: 'text-emerald-500',
+    },
+    {
+      label: 'High Risk SKU Count',
+      value: loading ? 'Loading…' : kpis ? kpis.high_risk_sku_count.toString() : 'Error',
+      icon: '⚠️',
+      change: kpis ? '+0' : '',
+      changeColor: 'text-slate-400',
+    },
+    {
+      label: 'Total SKU Count',
+      value: loading ? 'Loading…' : kpis ? kpis.total_sku_count.toString() : 'Error',
+      icon: '📦',
+      change: kpis ? '+0' : '',
+      changeColor: 'text-slate-400',
+    },
   ];
 
   return (
@@ -36,6 +79,7 @@ export default function ReportsPage() {
         <div>
           <h1 className="text-3xl font-bold text-[#0f172a]">Reports & Analytics</h1>
           <p className="text-[#64748b] mt-1">Performance metrics and revenue breakdown</p>
+          {error && <p className="mt-2 text-sm text-rose-600">{error}</p>}
         </div>
         <button className="text-slate-400 hover:text-slate-600">⚙️</button>
       </div>

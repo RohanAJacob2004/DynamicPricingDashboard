@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getSkus, getSkuDetail } from '@/lib/api';
+import { getAllKpis, ProductKpi } from '@/lib/api';
 import { SkuSummary, SkuDetail } from '@/lib/api-types';
 import { products as fallbackProducts, priceHistory as fallbackPriceHistory, getNextRunData, Product } from '@/lib/data';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -15,6 +16,8 @@ export default function DashboardHome() {
   const [products, setProducts] = useState<Product[]>(fallbackProducts);
   const [priceHistory, setPriceHistory] = useState(fallbackPriceHistory);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [kpis, setKpis] = useState<ProductKpi[]>([]);
+  const [kpiError, setKpiError] = useState<string | null>(null);
   const [currentRun, setCurrentRun] = useState(1);
   const [agentScores, setAgentScores] = useState<Record<string, number>>({
     'Calendar': 0.91,
@@ -35,6 +38,13 @@ export default function DashboardHome() {
         setUseFallback(true);
         setLoading(false);
       });
+
+    getAllKpis()
+      .then(data => setKpis(data))
+      .catch(err => {
+        console.error('Failed to load KPI details:', err);
+        setKpiError('Could not load KPI metrics.');
+      });
   }, []);
 
   const openSkus = skus.filter(s => s.final_modifier > 0);
@@ -42,10 +52,11 @@ export default function DashboardHome() {
   const avgModifier = skus.length
     ? +(skus.reduce((sum, s) => sum + s.final_modifier, 0) / skus.length).toFixed(4)
     : 0;
+  const selectedKpi = kpis[0];
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+      prev.includes(id) ? [] : [id]
     );
   };
 
@@ -124,35 +135,43 @@ export default function DashboardHome() {
         </div>
       )}
 
+   
+
       <div className="grid grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-lg border border-slate-100 shadow-xs hover:shadow-sm transition-shadow">
           <div className="flex justify-between items-center mb-3">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total SKUs</span>
-            <span className="text-base text-slate-400">ⓘ</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Weeks of Supply</span>
+            <span className="text-base text-slate-400">📦</span>
           </div>
-          <div className="text-3xl font-bold text-slate-800">{useFallback ? products.length : skus.length}</div>
+          <div className="text-3xl font-bold text-slate-800">
+            {selectedKpi ? selectedKpi.weeks_of_supply.toFixed(1) : '—'}
+          </div>
         </div>
         <div className="bg-white p-5 rounded-lg border border-slate-100 shadow-xs hover:shadow-sm transition-shadow">
           <div className="flex justify-between items-center mb-3">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Recommended Down</span>
-            <span className="text-base text-rose-500">📉</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Days to Expiry</span>
+            <span className="text-base text-slate-400">⏳</span>
           </div>
-          <div className="text-3xl font-bold text-slate-800">{useFallback ? 5 : downSkus.length}</div>
+          <div className="text-3xl font-bold text-slate-800">
+            {selectedKpi ? selectedKpi.days_to_expiry : '—'}
+          </div>
         </div>
         <div className="bg-white p-5 rounded-lg border border-slate-100 shadow-xs hover:shadow-sm transition-shadow">
           <div className="flex justify-between items-center mb-3">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Recommended Up</span>
-            <span className="text-base text-emerald-500">📈</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Estimated Waste Units</span>
+            <span className="text-base text-slate-400">⚠️</span>
           </div>
-          <div className="text-3xl font-bold text-slate-800">{useFallback ? 2 : openSkus.length}</div>
+          <div className="text-3xl font-bold text-slate-800">
+            {selectedKpi ? selectedKpi.estimated_waste_units : '—'}
+          </div>
         </div>
         <div className="bg-white p-5 rounded-lg border border-slate-100 shadow-xs hover:shadow-sm transition-shadow">
           <div className="flex justify-between items-center mb-3">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Avg Modifier</span>
-            <span className="text-base text-slate-400">∨</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Avg Daily Sales</span>
+            <span className="text-base text-slate-400">💰</span>
           </div>
-          <div className={`text-3xl font-bold ${useFallback ? 'text-slate-800' : avgModifier < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-            {useFallback ? '-0.17' : avgModifier.toFixed(2)}
+          <div className="text-3xl font-bold text-slate-800">
+            {selectedKpi ? `$${selectedKpi.avg_daily_sales_revenue.toFixed(2)}` : '—'}
           </div>
         </div>
       </div>
