@@ -168,12 +168,10 @@ export const seasonAgentData: {
 ];
 
 export const revenueByCategory: { category: string; revenue: number }[] = [
-  { category: 'Beverages', revenue: 12450 },
-  { category: 'Dairy', revenue: 8730 },
-  { category: 'Snacks', revenue: 6210 },
-  { category: 'Produce', revenue: 4150 },
+ 
+  { category: 'Meat', revenue: 4150 },
   { category: 'Bakery', revenue: 3890 },
-  { category: 'Frozen', revenue: 2980 },
+
 ];
 
 export const monthlySales: { month: string; sales: number }[] = [
