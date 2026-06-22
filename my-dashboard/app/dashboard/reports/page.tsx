@@ -167,7 +167,7 @@ export default function ReportsPage() {
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }}></div>
                   <span className="text-slate-600">{cat.displayName}</span>
                 </div>
-                <span className="font-semibold text-slate-900">32%</span>
+              
               </div>
             ))}
           </div>

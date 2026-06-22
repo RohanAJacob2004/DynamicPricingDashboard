@@ -66,39 +66,39 @@ export const competitorAgentData: {
   justification: string;
   priceHistory: { time: string; ourPrice: number; competitorPrice: number }[];
 }[] = [
-  {
-    skuId: 'SKU-1042',
-    productName: 'Cold Brew Coffee 12oz',
-    ourPrice: 3.99,
-    competitorPrice: 4.29,
-    justification: 'Competitor pricing at $4.29. Our price of $3.99 keeps us competitive while maintaining margin.',
-    priceHistory: [
-      { time: '12:00', ourPrice: 3.99, competitorPrice: 4.49 },
-      { time: '12:10', ourPrice: 4.05, competitorPrice: 4.39 },
-      { time: '12:20', ourPrice: 3.99, competitorPrice: 4.35 },
-      { time: '12:30', ourPrice: 3.95, competitorPrice: 4.29 },
-      { time: '12:40', ourPrice: 3.99, competitorPrice: 4.32 },
-      { time: '12:50', ourPrice: 3.97, competitorPrice: 4.28 },
-      { time: '13:00', ourPrice: 3.99, competitorPrice: 4.29 },
-    ],
-  },
-  {
-    skuId: 'SKU-2187',
-    productName: 'Organic Whole Milk 1L',
-    ourPrice: 2.59,
-    competitorPrice: 2.79,
-    justification: 'Competitor raised price to $2.79. Maintaining $2.59 to capture price-sensitive customers.',
-    priceHistory: [
-      { time: '12:00', ourPrice: 2.59, competitorPrice: 2.69 },
-      { time: '12:10', ourPrice: 2.59, competitorPrice: 2.72 },
-      { time: '12:20', ourPrice: 2.55, competitorPrice: 2.75 },
-      { time: '12:30', ourPrice: 2.59, competitorPrice: 2.79 },
-      { time: '12:40', ourPrice: 2.59, competitorPrice: 2.78 },
-      { time: '12:50', ourPrice: 2.57, competitorPrice: 2.79 },
-      { time: '13:00', ourPrice: 2.59, competitorPrice: 2.79 },
-    ],
-  },
-];
+    {
+      skuId: 'SKU-1042',
+      productName: 'Cold Brew Coffee 12oz',
+      ourPrice: 3.99,
+      competitorPrice: 4.29,
+      justification: 'Competitor pricing at $4.29. Our price of $3.99 keeps us competitive while maintaining margin.',
+      priceHistory: [
+        { time: '12:00', ourPrice: 3.99, competitorPrice: 4.49 },
+        { time: '12:10', ourPrice: 4.05, competitorPrice: 4.39 },
+        { time: '12:20', ourPrice: 3.99, competitorPrice: 4.35 },
+        { time: '12:30', ourPrice: 3.95, competitorPrice: 4.29 },
+        { time: '12:40', ourPrice: 3.99, competitorPrice: 4.32 },
+        { time: '12:50', ourPrice: 3.97, competitorPrice: 4.28 },
+        { time: '13:00', ourPrice: 3.99, competitorPrice: 4.29 },
+      ],
+    },
+    {
+      skuId: 'SKU-2187',
+      productName: 'Organic Whole Milk 1L',
+      ourPrice: 2.59,
+      competitorPrice: 2.79,
+      justification: 'Competitor raised price to $2.79. Maintaining $2.59 to capture price-sensitive customers.',
+      priceHistory: [
+        { time: '12:00', ourPrice: 2.59, competitorPrice: 2.69 },
+        { time: '12:10', ourPrice: 2.59, competitorPrice: 2.72 },
+        { time: '12:20', ourPrice: 2.55, competitorPrice: 2.75 },
+        { time: '12:30', ourPrice: 2.59, competitorPrice: 2.79 },
+        { time: '12:40', ourPrice: 2.59, competitorPrice: 2.78 },
+        { time: '12:50', ourPrice: 2.57, competitorPrice: 2.79 },
+        { time: '13:00', ourPrice: 2.59, competitorPrice: 2.79 },
+      ],
+    },
+  ];
 
 export const inventoryAgentData: {
   skuId: string;
@@ -107,28 +107,28 @@ export const inventoryAgentData: {
   unitsAtRisk: number;
   justification: string;
 }[] = [
-  {
-    skuId: 'SKU-5019',
-    productName: 'Avocado 4-count',
-    daysToExpire: 2,
-    unitsAtRisk: 45,
-    justification: 'Avocados have high spoilage risk. Recommend markdown to $2.49 to clear stock within 48 hours.',
-  },
-  {
-    skuId: 'SKU-2187',
-    productName: 'Organic Whole Milk 1L',
-    daysToExpire: 4,
-    unitsAtRisk: 28,
-    justification: 'Milk approaching expiry. Reduce price by 15% to accelerate turnover.',
-  },
-  {
-    skuId: 'SKU-3301',
-    productName: 'Greek Yogurt 500g',
-    daysToExpire: 7,
-    unitsAtRisk: 12,
-    justification: 'Sufficient shelf life remaining. No immediate action needed.',
-  },
-];
+    {
+      skuId: 'SKU-5019',
+      productName: 'Avocado 4-count',
+      daysToExpire: 2,
+      unitsAtRisk: 45,
+      justification: 'Avocados have high spoilage risk. Recommend markdown to $2.49 to clear stock within 48 hours.',
+    },
+    {
+      skuId: 'SKU-2187',
+      productName: 'Organic Whole Milk 1L',
+      daysToExpire: 4,
+      unitsAtRisk: 28,
+      justification: 'Milk approaching expiry. Reduce price by 15% to accelerate turnover.',
+    },
+    {
+      skuId: 'SKU-3301',
+      productName: 'Greek Yogurt 500g',
+      daysToExpire: 7,
+      unitsAtRisk: 12,
+      justification: 'Sufficient shelf life remaining. No immediate action needed.',
+    },
+  ];
 
 export const seasonAgentData: {
   skuId: string;
@@ -140,37 +140,37 @@ export const seasonAgentData: {
   justification: string;
   weatherAlerts: { date: string; alert: string }[];
 }[] = [
-  {
-    skuId: 'SKU-1042',
-    productName: 'Cold Brew Coffee 12oz',
-    priceModifier: 0.08,
-    urgency: 'high',
-    weatherEvent: 'Heatwave',
-    currentTemperature: 34,
-    justification: 'Temperature forecast shows 34°C. Cold coffee demand expected to surge. Increase price by 8%.',
-    weatherAlerts: [
-      { date: '2024-01-25', alert: 'Heatwave warning: temperatures reaching 35°C' },
-      { date: '2024-01-26', alert: 'High UV index expected' },
-    ],
-  },
-  {
-    skuId: 'SKU-4450',
-    productName: 'Sparkling Water 6-pack',
-    priceModifier: 0.05,
-    urgency: 'medium',
-    weatherEvent: 'Warm Spell',
-    currentTemperature: 28,
-    justification: 'Moderate temperature increase. Slight price uplift for refreshing beverages.',
-    weatherAlerts: [
-      { date: '2024-01-27', alert: 'Above-average temperatures expected' },
-    ],
-  },
-];
+    {
+      skuId: 'SKU-1042',
+      productName: 'Cold Brew Coffee 12oz',
+      priceModifier: 0.08,
+      urgency: 'high',
+      weatherEvent: 'Heatwave',
+      currentTemperature: 34,
+      justification: 'Temperature forecast shows 34°C. Cold coffee demand expected to surge. Increase price by 8%.',
+      weatherAlerts: [
+        { date: '2024-01-25', alert: 'Heatwave warning: temperatures reaching 35°C' },
+        { date: '2024-01-26', alert: 'High UV index expected' },
+      ],
+    },
+    {
+      skuId: 'SKU-4450',
+      productName: 'Sparkling Water 6-pack',
+      priceModifier: 0.05,
+      urgency: 'medium',
+      weatherEvent: 'Warm Spell',
+      currentTemperature: 28,
+      justification: 'Moderate temperature increase. Slight price uplift for refreshing beverages.',
+      weatherAlerts: [
+        { date: '2024-01-27', alert: 'Above-average temperatures expected' },
+      ],
+    },
+  ];
 
 export const revenueByCategory: { category: string; revenue: number }[] = [
- 
-  { category: 'Meat', revenue: 4150 },
-  { category: 'Bakery', revenue: 3890 },
+
+  { category: 'Meat', revenue: 5000 },
+  { category: 'Bakery', revenue: 5000 },
 
 ];
 
