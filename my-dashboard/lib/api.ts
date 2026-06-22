@@ -1,4 +1,4 @@
-import { SkuSummary, SkuDetail, InventoryAgentDetail, CompetitorSkuSummary, CompetitorAgentDetail } from './api-types';
+import { SkuSummary, SkuDetail, InventoryAgentDetail, CompetitorSkuSummary, CompetitorAgentDetail, CustomerItem } from './api-types';
 
 export interface DashboardKpis {
   avg_gross_margin_pct: number;
@@ -68,6 +68,15 @@ export function getCompetitorSkus(): Promise<CompetitorSkuSummary[]> {
 
 export function getCompetitorAgent(sku: string): Promise<CompetitorAgentDetail> {
   return apiFetch(`/api/agents/competitor/${encodeURIComponent(sku)}`);
+}
+
+export async function getCustomerItem(skuId: string): Promise<CustomerItem> {
+  const res = await fetch(`/api/customer-items/${encodeURIComponent(skuId)}`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch customer item for ${skuId}: ${res.status}`);
+  }
+  const json = await res.json();
+  return json.data;
 }
 
 export async function getKpiBySku(skuId: string): Promise<ProductKpi[]> {

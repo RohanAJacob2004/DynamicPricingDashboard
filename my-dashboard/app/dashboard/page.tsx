@@ -1,11 +1,13 @@
 ﻿'use client';
 
 import { useState, useEffect } from 'react';
-import { getAllKpis, getSkuDetail, ProductKpi } from '@/lib/api';
-import { SkuDetail } from '@/lib/api-types';
+import { getAllKpis, getSkuDetail, getCustomerItem, getSkus, ProductKpi } from '@/lib/api';
+import { SkuDetail, CustomerItem } from '@/lib/api-types';
 
 export default function DashboardHome() {
   const [kpis, setKpis] = useState<ProductKpi[]>([]);
+  const [customerItems, setCustomerItems] = useState<CustomerItem[]>([]);
+  const [customerItemsLoading, setCustomerItemsLoading] = useState(true);
   const [kpiError, setKpiError] = useState<string | null>(null);
   const [kpisLoading, setKpisLoading] = useState(true);
   const [selectedSkuId, setSelectedSkuId] = useState<string>('');
@@ -27,6 +29,26 @@ export default function DashboardHome() {
         setKpiError('Could not load KPI metrics.');
       })
       .finally(() => setKpisLoading(false));
+  }, []);
+
+  useEffect(() => {
+    getSkus()
+      .then(skus => {
+        return Promise.allSettled(
+          skus.map(s => getCustomerItem(s.sku).then(item => item).catch(() => null))
+        );
+      })
+      .then(results => {
+        const items: CustomerItem[] = [];
+        results.forEach(r => {
+          if (r.status === 'fulfilled' && r.value) {
+            items.push(r.value);
+          }
+        });
+        setCustomerItems(items);
+      })
+      .catch(err => console.error('Failed to load customer items:', err))
+      .finally(() => setCustomerItemsLoading(false));
   }, []);
 
   useEffect(() => {
@@ -127,13 +149,10 @@ export default function DashboardHome() {
 
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-50 flex justify-between items-center">
-          <h2 className="font-bold text-slate-900">SKU KPI Overview</h2>
+          <h2 className="font-bold text-slate-900">Customer Items</h2>
           <div className="flex items-center gap-3">
             <span className="text-slate-400 text-sm">
-              {filterMode === 'needs_review' ? `${filteredKpis.length} of ` : ''}{kpis.length} SKUs
-              {needsReviewSet.size > 0 && (
-                <span className="text-amber-500 ml-1">· {needsReviewSet.size} need review</span>
-              )}
+              {customerItems.length} items
             </span>
             <button
               onClick={() => setFilterMode(f => f === 'all' ? 'needs_review' : 'all')}
@@ -148,51 +167,49 @@ export default function DashboardHome() {
           </div>
         </div>
 
+        {customerItemsLoading ? (
+          <div className="p-8 text-center text-slate-400 text-sm">Loading items...</div>
+        ) : (
         <table className="w-full text-left">
           <thead className="bg-[#fcfdfe] text-slate-400 text-xs font-semibold uppercase tracking-wider">
             <tr>
               <th className="px-6 py-4">SKU</th>
-              <th className="px-6 py-4">Gross Margin</th>
-              <th className="px-6 py-4">Daily Revenue</th>
-              <th className="px-6 py-4">Weeks of Supply</th>
-              <th className="px-6 py-4">Days to Expiry</th>
-              <th className="px-6 py-4">Risk</th>
-              <th className="px-6 py-4">Est. Waste</th>
-              <th className="px-6 py-4">Avg Daily Sales</th>
+              <th className="px-6 py-4">Item Name</th>
+              <th className="px-6 py-4">Category</th>
+              <th className="px-6 py-4">Unit</th>
+              <th className="px-6 py-4">Days to Expire</th>
+              
+              <th className="px-6 py-4">New Price</th>
               <th className="px-6 py-4"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {filteredKpis.map((k) => (
-              <tr key={k.sku_id} className={`hover:bg-slate-50/50 transition-colors ${selectedSkuId === k.sku_id ? 'bg-teal-50/50' : ''}`}>
-                <td className="px-6 py-4 text-sm font-medium text-slate-900">{k.sku_id}</td>
-                <td className="px-6 py-4 text-sm text-slate-700">{k.gross_margin_pct.toFixed(1)}%</td>
-                <td className="px-6 py-4 text-sm text-slate-700">${k.daily_revenue.toFixed(2)}</td>
-                <td className="px-6 py-4 text-sm text-slate-700">{k.weeks_of_supply.toFixed(1)}</td>
-                <td className="px-6 py-4 text-sm text-slate-700">{k.days_to_expiry}</td>
-                <td className="px-6 py-4">
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold border ${k.is_high_risk ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
-                    {k.is_high_risk ? 'High' : 'Low'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-sm text-slate-700">{k.estimated_waste_units}</td>
-                <td className="px-6 py-4 text-sm text-slate-700">${k.avg_daily_sales_revenue.toFixed(2)}</td>
+            {customerItems.map((item) => (
+              <tr key={item.sku_id} className={`hover:bg-slate-50/50 transition-colors ${selectedSkuId === item.sku_id ? 'bg-teal-50/50' : ''}`}>
+                <td className="px-6 py-4 text-sm font-medium text-slate-900">{item.sku_id}</td>
+                <td className="px-6 py-4 text-sm text-slate-700">{item.item_name}</td>
+                <td className="px-6 py-4 text-sm text-slate-700">{item.item_category.toUpperCase()}</td>
+                <td className="px-6 py-4 text-sm text-slate-700">{item.unit}</td>
+                <td className="px-6 py-4 text-sm text-slate-700">{item.time_to_expire != null ? item.time_to_expire.toFixed(1) : '—'}</td>
+                
+                <td className="px-6 py-4 text-sm text-slate-700">{item.new_price != null ? `$${item.new_price.toFixed(2)}` : '—'}</td>
                 <td className="px-6 py-4">
                   <button
-                    onClick={() => setSelectedSkuId(k.sku_id)}
+                    onClick={() => setSelectedSkuId(item.sku_id)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                      selectedSkuId === k.sku_id
+                      selectedSkuId === item.sku_id
                         ? 'bg-teal-600 text-white'
                         : 'bg-slate-100 text-slate-600 hover:bg-teal-100 hover:text-teal-700'
                     }`}
                   >
-                    {selectedSkuId === k.sku_id ? 'Selected' : 'Select'}
+                    {selectedSkuId === item.sku_id ? 'Selected' : 'Select'}
                   </button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
@@ -280,17 +297,23 @@ export default function DashboardHome() {
                       </div>
                     </div>
 
-                    <div className="flex gap-4 border-t border-slate-50 pt-3">
-                      <div className="flex-1">
+                    <div className="grid grid-cols-3 gap-4 border-t border-slate-50 pt-3">
+                      <div>
                         <p className="text-xs text-slate-400 mb-1">Inventory</p>
                         <span className={`text-sm font-medium ${d.inventory.recommendation.action === 'DISCOUNT' ? 'text-rose-500' : 'text-emerald-500'}`}>
                           {d.inventory.recommendation.action ?? '—'} {(d.inventory.recommendation.suggested_modifier * 100).toFixed(1)}%
                         </span>
                       </div>
-                      <div className="flex-1">
+                      <div>
                         <p className="text-xs text-slate-400 mb-1">Competitor</p>
                         <span className="text-sm font-medium text-slate-700">
                           {(d.competitor.recommendation.suggested_modifier * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">Calendar</p>
+                        <span className={`text-sm font-medium ${d.calendar?.recommendation.action === 'DISCOUNT' ? 'text-rose-500' : 'text-emerald-500'}`}>
+                          {d.calendar ? `${d.calendar.recommendation.action} ${(d.calendar.recommendation.suggested_modifier * 100).toFixed(1)}%` : '—'}
                         </span>
                       </div>
                     </div>
@@ -313,8 +336,14 @@ export default function DashboardHome() {
                         <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Competitor Agent</p>
                         <p className="text-sm text-slate-700 leading-relaxed">{d.competitor.rationale}</p>
                       </div>
+                      {d.calendar && (
                       <div>
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Orchestrator</p>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Calendar Agent</p>
+                        <p className="text-sm text-slate-700 leading-relaxed">{d.calendar.rationale}</p>
+                      </div>
+                      )}
+                      <div>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Pricing Agent</p>
                         <p className="text-sm text-slate-700 leading-relaxed">{d.final_price.rationale}</p>
                       </div>
 

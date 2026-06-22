@@ -101,16 +101,16 @@ export default function InventoryAgentPage() {
               </span>
             </div>
           </div>
-           <div className="bg-amber-50 border border-amber-200 rounded-lg p-5">
-                <div className="flex items-start gap-3">
-                  {/* <span className="text-lg mt-0.5">🤖</span> */}
-                  <div>
-                    <h4 className="font-bold text-amber-900 mb-2">Agent Reasoning</h4>
-                    <p className="text-sm text-amber-800 leading-relaxed">{data.reasoning}</p>
-                    <p className="text-xs text-amber-600 mt-2">Confidence: {(data.confidence * 100).toFixed(0)}% {data.fallback_used ? '(fallback)' : ''}</p>
-                  </div>
-                </div>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-5">
+            <div className="flex items-start gap-3">
+              {/* <span className="text-lg mt-0.5">🤖</span> */}
+              <div>
+                <h4 className="font-bold text-amber-900 mb-2">Agent Reasoning</h4>
+                <p className="text-sm text-amber-800 leading-relaxed">{data.reasoning}</p>
+                <p className="text-xs text-amber-600 mt-2">Confidence: {(data.confidence * 100).toFixed(0)}% {data.fallback_used ? '(fallback)' : ''}</p>
               </div>
+            </div>
+          </div>
 
           <div className="grid grid-cols-4 gap-4">
             <div className="bg-white p-5 rounded-lg border border-slate-100 shadow-xs">
@@ -127,7 +127,7 @@ export default function InventoryAgentPage() {
                 <span className="text-teal-600">⏱️</span>
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Time to Expiry</span>
               </div>
-              <div className="text-3xl font-bold text-slate-800">{data.metrics.days_to_expiry < 1 ? (data.metrics.days_to_expiry * 24).toFixed(0) + ' hours' : data.metrics.days_to_expiry + ' days'}</div>
+              <div className="text-3xl font-bold text-slate-800">{data.metrics.days_to_expiry < 1 ? (data.metrics.days_to_expiry * 24).toFixed(0) + ' hours' : data.metrics.days_to_expiry.toFixed(0) + ' days'}</div>
               <p className="text-xs text-slate-500 mt-1">{data.metrics.expiry_date ?? 'N/A'}</p>
             </div>
 
@@ -187,7 +187,7 @@ export default function InventoryAgentPage() {
                 </div>
               </div>
 
-             
+
             </div>
 
             <div>
@@ -212,7 +212,7 @@ export default function InventoryAgentPage() {
             </div>
           </div>
 
-         
+
         </>
       )}
     </div>

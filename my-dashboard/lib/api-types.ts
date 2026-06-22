@@ -11,6 +11,17 @@ export interface InventoryAgentInfo {
   rationale: string;
 }
 
+export interface CalendarAgentInfo {
+  agent_id: string;
+  sku: string;
+  recommendation: {
+    action: string;
+    suggested_modifier: number;
+    confidence: number;
+  };
+  rationale: string;
+}
+
 export interface CompetitorAgentInfo {
   agent_id: string;
   sku: string;
@@ -52,6 +63,7 @@ export interface SkuDetail {
   sku: string;
   inventory: InventoryAgentInfo;
   competitor: CompetitorAgentInfo;
+  calendar?: CalendarAgentInfo;
   final_price: FinalPriceInfo;
 }
 
@@ -124,6 +136,22 @@ export interface CompetitorAgentDetail {
   reasoning: string;
   confidence: number;
   fallback_used: boolean;
+}
+
+export interface CustomerItem {
+  sku_id: string;
+  item_name: string;
+  item_category: string;
+  unit: string;
+  time_to_expire: number;
+  old_price: number;
+  new_price: number;
+  show_old_price: boolean;
+  image_url: string;
+  description: string;
+  protein: string | null;
+  calories: string | null;
+  carbohydrate: string | null;
 }
 
 export interface InventoryAgentDetail {
