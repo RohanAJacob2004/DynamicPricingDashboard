@@ -89,6 +89,8 @@ export interface InventoryJustification {
   waste_risk_tier: string;
   units_at_risk: number;
   cost_basis_value_at_risk: number;
+  expiry_loss_rate?: number;
+  loss_if_no_action?: number;
   daily_velocity: number;
   units_to_clear: number;
   required_velocity: number;
